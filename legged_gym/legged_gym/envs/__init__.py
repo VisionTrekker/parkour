@@ -48,6 +48,9 @@ from .go2.go2_config import Go2RoughCfg, Go2RoughCfgPPO
 from .go2.go2_field_config import Go2FieldCfg, Go2FieldCfgPPO
 from .go2.go2_distill_config import Go2DistillCfg, Go2DistillCfgPPO
 
+from .aliengo.aliengo_config import AlienGoRoughCfg, AlienGoRoughCfgPPO
+from .aliengo.aliengo_field_config import AlienGoFieldCfg, AlienGoFieldCfgPPO
+from .aliengo.aliengo_distill_config import AlienGoDistillCfg, AlienGoDistillCfgPPO
 
 import os
 
@@ -57,12 +60,18 @@ task_registry.register( "anymal_c_rough", Anymal, AnymalCRoughCfg(), AnymalCRoug
 task_registry.register( "anymal_c_flat", Anymal, AnymalCFlatCfg(), AnymalCFlatCfgPPO() )
 task_registry.register( "anymal_b", Anymal, AnymalBRoughCfg(), AnymalBRoughCfgPPO() )
 task_registry.register( "a1", LeggedRobot, A1RoughCfg(), A1RoughCfgPPO() )
+task_registry.register( "a1_field", LeggedRobot, A1FieldCfg(), A1FieldCfgPPO() )
 task_registry.register( "cassie", Cassie, CassieRoughCfg(), CassieRoughCfgPPO() )
 task_registry.register( "go1_field", LeggedRobot, Go1FieldCfg(), Go1FieldCfgPPO())
 task_registry.register( "go1_distill", LeggedRobot, Go1FieldDistillCfg(), Go1FieldDistillCfgPPO())
 task_registry.register( "go2", LeggedRobot, Go2RoughCfg(), Go2RoughCfgPPO() )
 task_registry.register( "go2_field", RobotFieldNoisy, Go2FieldCfg(), Go2FieldCfgPPO() )
 task_registry.register( "go2_distill", RobotFieldNoisy, Go2DistillCfg(), Go2DistillCfgPPO() )
+
+task_registry.register( "aliengo", LeggedRobot, AlienGoRoughCfg(), AlienGoRoughCfgPPO() )
+task_registry.register( "aliengo_field", RobotFieldNoisy, AlienGoFieldCfg(), AlienGoFieldCfgPPO() ) # Go2
+# task_registry.register( "aliengo_field", LeggedRobot, AlienGoFieldCfg(), AlienGoFieldCfgPPO() )   # A1
+task_registry.register( "aliengo_distill", RobotFieldNoisy, AlienGoDistillCfg(), AlienGoDistillCfgPPO() )  # Go2
 
 ## The following tasks are for the convinience of opensource
 from .a1.a1_remote_config import A1RemoteCfg, A1RemoteCfgPPO

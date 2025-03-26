@@ -935,7 +935,9 @@ class LeggedRobot(BaseTask):
     def _write_base_pose_noise(self, noise_vec):
         if not hasattr(self.cfg.noise.noise_scales, "base_pose"):
             return
-        noise_vec[:] = self.cfg.noise.noise_scales.base_pose * self.cfg.noise.noise_level * self.obs_scales.base_pose
+        obs_scale_base_pose_numpy = np.array(self.obs_scales.base_pose)
+        obs_scale_base_pose = torch.from_numpy(obs_scale_base_pose_numpy).float().to(self.device)
+        noise_vec[:] = self.cfg.noise.noise_scales.base_pose * self.cfg.noise.noise_level * obs_scale_base_pose
     
     def _write_robot_config_noise(self, noise_vec):
         if not hasattr(self.cfg.noise.noise_scales, "robot_config"):

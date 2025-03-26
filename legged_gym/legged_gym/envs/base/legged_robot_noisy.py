@@ -137,15 +137,19 @@ class LeggedRobotNoisyMixin:
     def _init_buffers(self):
         return_ = super()._init_buffers()
         all_obs_components = self.all_obs_components
+        print("[_init_buffers]: ")
 
         if getattr(self.cfg.control, "action_delay", False):
             assert hasattr(self.cfg.control, "action_delay_range") and hasattr(self.cfg.control, "action_delay_resampling_time"), "Please specify action_delay_range and action_delay_resampling_time in the config file."
             self.build_action_delay_buffer()
 
         self.component_governed_by_sensor = dict()
+        print("[Available sensors]: ", self.available_sensors)
         for sensor_name in self.available_sensors:
+            print("[self.cfg.sensor]: ", self.cfg.sensor)
             if hasattr(self.cfg.sensor, sensor_name):
                 self.set_latency_buffer_for_sensor(sensor_name)
+                print("[sensor_name]: ", sensor_name)
                 for component in getattr(self.cfg.sensor, sensor_name).obs_components:
                     assert not hasattr(self, component + "_obs_buffer"), "The obs component {} already has a buffer and corresponding sensor. Should not be governed also by {}".format(component, sensor_name)
                     self.set_obs_buffers_for_component(component, sensor_name)

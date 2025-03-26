@@ -5,11 +5,12 @@ from collections import OrderedDict
 from datetime import datetime
 
 from legged_gym.utils.helpers import merge_dict
-from legged_gym.envs.go2.go2_field_config import Go2FieldCfg, Go2FieldCfgPPO, Go2RoughCfgPPO
+from legged_gym.envs.aliengo.aliengo_field_config import AlienGoFieldCfg, AlienGoFieldCfgPPO, AlienGoRoughCfgPPO
 
 multi_process_ = False
-class Go2DistillCfg( Go2FieldCfg ):
-    class env( Go2FieldCfg.env ):
+
+class AlienGoDistillCfg(AlienGoFieldCfg):
+    class env(AlienGoFieldCfg.env):
         num_envs = 256
         obs_components = [
             "lin_vel",
@@ -33,7 +34,7 @@ class Go2DistillCfg( Go2FieldCfg ):
             "height_measurements",
         ]
 
-    class terrain( Go2FieldCfg.terrain ):
+    class terrain(AlienGoFieldCfg.terrain):
         if multi_process_:
             num_rows = 4
             num_cols = 1
@@ -42,63 +43,66 @@ class Go2DistillCfg( Go2FieldCfg ):
             num_cols = 20
         curriculum = False
 
-        BarrierTrack_kwargs = merge_dict(Go2FieldCfg.terrain.BarrierTrack_kwargs, dict(
-            leap= dict(
-                length= [0.05, 0.8],
-                depth= [0.5, 0.8],
-                height= 0.15, # expected leap height over the gap
-                fake_offset= 0.1,
+        BarrierTrack_kwargs = merge_dict(AlienGoFieldCfg.terrain.BarrierTrack_kwargs, dict(
+            leap=dict(
+                length=[0.05, 0.8],
+                depth=[0.5, 0.8],
+                height=0.15,  # expected leap height over the gap
+                fake_offset=0.1,
             ),
         ))
 
-    class sensor( Go2FieldCfg.sensor ):
+    class sensor(AlienGoFieldCfg.sensor):
         class forward_camera:
             obs_components = ["forward_depth"]
-            resolution = [int(480/4), int(640/4)]
+            resolution = [int(480 / 4), int(640 / 4)]
             position = dict(
-                mean= [0.24, -0.0175, 0.12],
-                std= [0.01, 0.0025, 0.03],
+                mean=[0.32, -0.0175, 0.03],
+                std=[0.01, 0.0025, 0.03],
             )
             rotation = dict(
-                lower= [-0.1, 0.37, -0.1],
-                upper= [0.1, 0.43, 0.1],
+                lower=[-0.1, 0.37, -0.1],
+                upper=[0.1, 0.43, 0.1],
             )
             resized_resolution = [48, 64]
             output_resolution = [48, 64]
             horizontal_fov = [86, 90]
-            crop_top_bottom = [int(48/4), 0]
-            crop_left_right = [int(28/4), int(36/4)]
+            crop_top_bottom = [int(48 / 4), 0]
+            crop_left_right = [int(28 / 4), int(36 / 4)]
             near_plane = 0.05
             depth_range = [0.0, 3.0]
 
             latency_range = [0.08, 0.142]
             latency_resampling_time = 5.0
-            refresh_duration = 1/10 # [s]
+            refresh_duration = 1 / 10  # [s]
 
-    class commands( Go2FieldCfg.commands ):
+    class commands(AlienGoFieldCfg.commands):
         # a mixture of command sampling and goal_based command update allows only high speed range
         # in x-axis but no limits on y-axis and yaw-axis
         lin_cmd_cutoff = 0.2
-        class ranges( Go2FieldCfg.commands.ranges ):
+
+        class ranges(AlienGoFieldCfg.commands.ranges):
             # lin_vel_x = [0.6, 1.8]
             lin_vel_x = [-0.6, 2.0]
-        
+
         is_goal_based = True
+
         class goal_based:
             # the ratios are related to the goal position in robot frame
-            x_ratio = None # sample from lin_vel_x range
+            x_ratio = None  # sample from lin_vel_x range
             y_ratio = 1.2
             yaw_ratio = 0.8
             follow_cmd_cutoff = True
-            x_stop_by_yaw_threshold = 1. # stop when yaw is over this threshold [rad]
+            x_stop_by_yaw_threshold = 1.  # stop when yaw is over this threshold [rad]
 
-    class normalization( Go2FieldCfg.normalization ):
-        class obs_scales( Go2FieldCfg.normalization.obs_scales ):
+    class normalization(AlienGoFieldCfg.normalization):
+        class obs_scales(AlienGoFieldCfg.normalization.obs_scales):
             forward_depth = 1.0
 
-    class noise( Go2FieldCfg.noise ):
+    class noise(AlienGoFieldCfg.noise):
         add_noise = False
-        class noise_scales( Go2FieldCfg.noise.noise_scales ):
+
+        class noise_scales(AlienGoFieldCfg.noise.noise_scales):
             forward_depth = 0.0
             ### noise for simulating sensors
             commands = 0.1
@@ -109,10 +113,11 @@ class Go2DistillCfg( Go2FieldCfg ):
             dof_vel = 0.2
             last_actions = 0.
             ### noise for simulating sensors
+
         class forward_depth:
-            stereo_min_distance = 0.175 # when using (480, 640) resolution
+            stereo_min_distance = 0.175  # when using (480, 640) resolution
             stereo_far_distance = 1.2
-            stereo_far_noise_std = 0.08 
+            stereo_far_noise_std = 0.08
             stereo_near_noise_std = 0.02
             stereo_full_block_artifacts_prob = 0.008
             stereo_full_block_values = [0.0, 0.25, 0.5, 1., 3.]
@@ -129,12 +134,15 @@ class Go2DistillCfg( Go2FieldCfg ):
     class curriculum:
         no_moveup_when_fall = False
 
-    class sim( Go2FieldCfg.sim ):
+    class sim(AlienGoFieldCfg.sim):
         no_camera = False
-    
+
+
 logs_root = osp.join(osp.dirname(osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))), "logs")
-class Go2DistillCfgPPO( Go2FieldCfgPPO ):
-    class algorithm( Go2FieldCfgPPO.algorithm ):
+
+
+class AlienGoDistillCfgPPO(AlienGoFieldCfgPPO):
+    class algorithm(AlienGoFieldCfgPPO.algorithm):
         entropy_coef = 0.0
         using_ppo = False
         num_learning_epochs = 8
@@ -148,12 +156,12 @@ class Go2DistillCfgPPO( Go2FieldCfgPPO ):
         action_labels_from_sample = False
 
         teacher_policy_class_name = "EncoderStateAcRecurrent"
-        teacher_ac_path = osp.join(logs_root, "field_go2",
-            "Mar14_09-09-30_Go2_10skills_pEnergy2.e-07_pTorques-1.e-07_pLazyStop-3.e+00_pPenD5.e-02_penEasier200_penHarder100_leapHeight2.e-01_motorTorqueClip_fromMar13_20-17-57",
-            "model_40000.pt"
-        )
+        teacher_ac_path = osp.join(logs_root, "field_aliengo",
+                                   "Mar24_19-57-58_AlienGo_10skills_pEnergy2.e-07_pTorques-1.e-07_pLazyStop-3.e+00_pPenD5.e-02_penEasier200_penHarder100_leapHeight2.e-01_fromMar17_19-38-29",
+                                   "model_30000.pt"
+                                   )
 
-        class teacher_policy( Go2FieldCfgPPO.policy ):
+        class teacher_policy(AlienGoFieldCfgPPO.policy):
             num_actor_obs = 48 + 21 * 11
             num_critic_obs = 48 + 21 * 11
             num_actions = 12
@@ -164,11 +172,11 @@ class Go2DistillCfgPPO( Go2FieldCfgPPO ):
                 ("commands", (3,)),
                 ("dof_pos", (12,)),
                 ("dof_vel", (12,)),
-                ("last_actions", (12,)), # till here: 3+3+3+3+12+12+12 = 48
+                ("last_actions", (12,)),  # till here: 3+3+3+3+12+12+12 = 48
                 ("height_measurements", (1, 21, 11)),
             ])
 
-    class policy( Go2RoughCfgPPO.policy ):
+    class policy(AlienGoRoughCfgPPO.policy):
         # configs for estimator module
         estimator_obs_components = [
             "ang_vel",
@@ -180,12 +188,15 @@ class Go2DistillCfgPPO( Go2FieldCfgPPO ):
         ]
         estimator_target_components = ["lin_vel"]
         replace_state_prob = 1.0
+
         class estimator_kwargs:
             hidden_sizes = [128, 64]
             nonlinearity = "CELU"
+
         # configs for visual encoder
         encoder_component_names = ["forward_depth"]
         encoder_class_name = "Conv2dHeadModel"
+
         class encoder_kwargs:
             channels = [16, 32, 32]
             kernel_sizes = [5, 4, 3]
@@ -193,45 +204,49 @@ class Go2DistillCfgPPO( Go2FieldCfgPPO ):
             hidden_sizes = [128]
             use_maxpool = True
             nonlinearity = "LeakyReLU"
+
         # configs for critic encoder
         critic_encoder_component_names = ["height_measurements"]
         critic_encoder_class_name = "MlpModel"
+
         class critic_encoder_kwargs:
             hidden_sizes = [128, 64]
             nonlinearity = "CELU"
+
         encoder_output_size = 32
 
         init_noise_std = 0.1
 
     if multi_process_:
         runner_class_name = "TwoStageRunner"
-    class runner( Go2FieldCfgPPO.runner ):
+
+    class runner(AlienGoFieldCfgPPO.runner):
         policy_class_name = "EncoderStateAcRecurrent"
         algorithm_class_name = "EstimatorTPPO"
-        experiment_name = "distill_go2"
+        experiment_name = "distill_aliengo"
         num_steps_per_env = 32
 
         if multi_process_:
             pretrain_iterations = -1
+
             class pretrain_dataset:
-                data_dir = "/media/lenovo/1/Embodied_AI/parkour/legged_gym/logs/distill_go2/traj"
+                data_dir = "/media/lenovo/1/Embodied_AI/parkour/legged_gym/logs/distill_aliengo/traj"
                 dataset_loops = -1
                 random_shuffle_traj_order = True
                 keep_latest_n_trajs = 1500
                 starting_frame_range = [0, 50]
 
         resume = True
-        load_run = osp.join(logs_root, "field_go2",
-            "Mar14_09-09-30_Go2_10skills_pEnergy2.e-07_pTorques-1.e-07_pLazyStop-3.e+00_pPenD5.e-02_penEasier200_penHarder100_leapHeight2.e-01_motorTorqueClip_fromMar13_20-17-57",
-        )
-        ckpt_manipulator = "replace_encoder0" if "field_go2" in load_run else None
+        load_run = osp.join(logs_root, "field_aliengo",
+                            "Mar24_19-57-58_AlienGo_10skills_pEnergy2.e-07_pTorques-1.e-07_pLazyStop-3.e+00_pPenD5.e-02_penEasier200_penHarder100_leapHeight2.e-01_fromMar17_19-38-29",
+                            )
+        ckpt_manipulator = "replace_encoder0" if "field_aliengo" in load_run else None
 
-        run_name = "".join(["Go2_",
-            ("{:d}skills".format(len(Go2DistillCfg.terrain.BarrierTrack_kwargs["options"]))),
-            ("_noResume" if not resume else "_from" + "_".join(load_run.split("/")[-1].split("_")[:2])),
-        ])
+        run_name = "".join(["AlienGo_",
+                            ("{:d}skills".format(len(AlienGoDistillCfg.terrain.BarrierTrack_kwargs["options"]))),
+                            ("_noResume" if not resume else "_from" + "_".join(load_run.split("/")[-1].split("_")[:2])),
+                            ])
 
         max_iterations = 60000
         log_interval = 100
-        save_interval = 2000
-        
+        save_interval = 1000

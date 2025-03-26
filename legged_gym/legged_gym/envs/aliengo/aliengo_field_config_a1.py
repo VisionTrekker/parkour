@@ -1,9 +1,10 @@
 import numpy as np
 import os.path as osp
-from legged_gym.envs.a1.a1_config import A1RoughCfg, A1RoughCfgPPO
+from legged_gym.envs.aliengo.aliengo_config_a1 import AlienGoRoughCfg, AlienGoRoughCfgPPO
 
-class A1FieldCfg( A1RoughCfg ):
-    class env( A1RoughCfg.env ):
+
+class AlienGoFieldCfg( AlienGoRoughCfg ):
+    class env( AlienGoRoughCfg.env ):
         num_envs = 4096 # 8192
         obs_components = [
             "proprioception", # 48
@@ -38,14 +39,14 @@ class A1FieldCfg( A1RoughCfg ):
             resolution = [16, 16]
             position = [0.32, 0., 0.03] # position in base_link
             rotation = [0., 0., 0.] # ZYX Euler angle in base_link
-    
+
         class proprioception:
-            delay_action_obs = False
-            latency_range = [0.0, 0.0]
-            latency_resampling_time = 2.0 # [s]
-    
-    class terrain( A1RoughCfg.terrain ):
-        mesh_type = None # Don't change
+            delay_action_obs = True
+            latency_range = [0.005, 0.045]
+            latency_resampling_time = 5.0 # [s]
+
+    class terrain(AlienGoRoughCfg.terrain):
+        mesh_type = None  # Don't change
         num_rows = 20
         num_cols = 50
         selected = "BarrierTrack" # "BarrierTrack" or "TerrainPerlin", "TerrainPerlin" can be used for training a walk policy.
@@ -108,27 +109,28 @@ class A1FieldCfg( A1RoughCfg ):
             # zScale= 0.15, # Use a constant zScale for training a walk policy
             frequency= 10,
         )
-    
-    class commands( A1RoughCfg.commands ):
+
+    class commands(AlienGoRoughCfg.commands):
         heading_command = False
         resampling_time = 10 # [s]
-        class ranges( A1RoughCfg.commands.ranges ):
+        class ranges(AlienGoRoughCfg.commands.ranges):
             lin_vel_x = [-1.0, 1.0]
             lin_vel_y = [0.0, 0.0]
             ang_vel_yaw = [0., 0.]
 
-    class control( A1RoughCfg.control ):
-        stiffness = {'joint': 50.}
+    class control(AlienGoRoughCfg.control):
+        stiffness = {'joint': 40.}
         damping = {'joint': 1.}
         action_scale = 0.5
-        torque_limits = 25 # override the urdf
+        torque_limits = 35  # override the urdf
         computer_clip_torque = True
         motor_clip_torque = False
+
         # action_delay = False # set to True to enable action delay in sim
         # action_delay_range = [0.002, 0.022] # [s]
         # action_delay_resampling_time = 5.0 # [s]
 
-    class asset( A1RoughCfg.asset ):
+    class asset(AlienGoRoughCfg.asset):
         penalize_contacts_on = ["base", "thigh", "calf"]
         terminate_after_contacts_on = ["base", "imu"]
         front_hip_names = ["FR_hip_joint", "FL_hip_joint"]
@@ -145,13 +147,13 @@ class A1FieldCfg( A1RoughCfg ):
         ]
 
         roll_kwargs = dict(
-            threshold= 0.8, # [rad]
-            tilt_threshold= 1.5,
+            threshold= 3.0, # [rad]
+            tilt_threshold= 3.0,
         )
         pitch_kwargs = dict(
-            threshold= 1.6, # [rad] # for leap, jump
-            jump_threshold= 1.6,
-            leap_threshold= 1.5,
+            threshold= 3.0, # [rad] # for leap, jump
+            jump_threshold= 3.0,
+            leap_threshold= 2.9,
         )
         z_low_kwargs = dict(
             threshold= 0.15, # [m]
@@ -166,7 +168,7 @@ class A1FieldCfg( A1RoughCfg ):
         check_obstacle_conditioned_threshold = True
         timeout_at_border = False
 
-    class domain_rand( A1RoughCfg.domain_rand ):
+    class domain_rand(AlienGoRoughCfg.domain_rand):
         randomize_com = True
         class com_range:
             x = [-0.05, 0.15]
@@ -174,7 +176,7 @@ class A1FieldCfg( A1RoughCfg ):
             z = [-0.05, 0.05]
 
         randomize_motor = True
-        leg_motor_strength_range = [0.9, 1.1]
+        leg_motor_strength_range = [0.8, 1.2]
 
         randomize_base_mass = True
         added_mass_range = [1.0, 3.0]
@@ -186,10 +188,25 @@ class A1FieldCfg( A1RoughCfg ):
             x= [0.2, 0.6],
             y= [-0.25, 0.25],
         )
+        init_base_rot_range = dict(
+            roll=[-0.75, 0.75],
+            pitch=[-0.75, 0.75],
+        )
+        init_base_vel_range = dict(
+            x=[-0.2, 1.5],
+            y=[-0.2, 0.2],
+            z=[-0.2, 0.2],
+            roll=[-1., 1.],
+            pitch=[-1., 1.],
+            yaw=[-1., 1.],
+        )
+        init_dof_vel_range = [-5, 5]
 
-        push_robots = False 
+        push_robots = True
+        max_push_vel_xy = 0.5  # [m/s]
+        push_interval_s = 2
 
-    class rewards( A1RoughCfg.rewards ):
+    class rewards(AlienGoRoughCfg.rewards):
         class scales:
             tracking_ang_vel = 0.05
             # world_vel_l2norm = -1.
@@ -202,8 +219,8 @@ class A1FieldCfg( A1RoughCfg ):
         soft_dof_pos_limit = 0.01
         only_positive_rewards = False
 
-    class normalization( A1RoughCfg.normalization ):
-        class obs_scales( A1RoughCfg.normalization.obs_scales ):
+    class normalization(AlienGoRoughCfg.normalization):
+        class obs_scales(AlienGoRoughCfg.normalization.obs_scales):
             forward_depth = 1.
             base_pose = [0., 0., 0., 1., 1., 1.]
             engaging_block = 1.
@@ -221,25 +238,25 @@ class A1FieldCfg( A1RoughCfg ):
         #         "RR_hip_joint", "RR_thigh_joint", "RR_calf_joint",
         #     ],
         # ): # This setting is only for position control.
-        #     clip_actions_low.append( (A1RoughCfg.asset.sdk_dof_range[sdk_joint_name + "_min"] + dof_pos_redundancy - A1RoughCfg.init_state.default_joint_angles[sim_joint_name]) / a1_action_scale )
-        #     clip_actions_high.append( (A1RoughCfg.asset.sdk_dof_range[sdk_joint_name + "_max"] - dof_pos_redundancy - A1RoughCfg.init_state.default_joint_angles[sim_joint_name]) / a1_action_scale )
+        #     clip_actions_low.append( (AlienGoRoughCfg.asset.sdk_dof_range[sdk_joint_name + "_min"] + dof_pos_redundancy - AlienGoRoughCfg.init_state.default_joint_angles[sim_joint_name]) / aliengo_action_scale )
+        #     clip_actions_high.append( (AlienGoRoughCfg.asset.sdk_dof_range[sdk_joint_name + "_max"] - dof_pos_redundancy - AlienGoRoughCfg.init_state.default_joint_angles[sim_joint_name]) / aliengo_action_scale )
         # del dof_pos_redundancy, sdk_joint_name, sim_joint_name # This is not intended to be an attribute of normalization
         """ The above action clip is used for tanh policy activation. """
 
-    class noise( A1RoughCfg.noise ):
+    class noise(AlienGoRoughCfg.noise):
         add_noise = False # disable internal uniform +- 1 noise, and no noise in proprioception
-        class noise_scales( A1RoughCfg.noise.noise_scales ):
+        class noise_scales(AlienGoRoughCfg.noise.noise_scales):
             forward_depth = 0.1
             base_pose = 1.0
 
-    class viewer( A1RoughCfg.viewer ):
+    class viewer(AlienGoRoughCfg.viewer):
         pos = [0, 0, 5]  # [m]
         lookat = [5., 5., 2.]  # [m]
 
         draw_volume_sample_points = False
 
-    class sim( A1RoughCfg.sim ):
-        body_measure_points = { # transform are related to body frame
+    class sim(AlienGoRoughCfg.sim):
+        body_measure_points = {  # transform are related to body frame
             "base": dict(
                 x= [i for i in np.arange(-0.2, 0.31, 0.03)],
                 y= [-0.08, -0.04, 0.0, 0.04, 0.08],
@@ -269,35 +286,35 @@ class A1FieldCfg( A1RoughCfg ):
         # chosen heuristically, please refer to `LeggedRobotField._get_terrain_curriculum_move` with fixed body_measure_points
 
 logs_root = osp.join(osp.dirname(osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))), "logs")
-class A1FieldCfgPPO( A1RoughCfgPPO ):
-    class algorithm( A1RoughCfgPPO.algorithm ):
+class AlienGoFieldCfgPPO(AlienGoRoughCfgPPO):
+    class algorithm(AlienGoRoughCfgPPO.algorithm):
         entropy_coef = 0.01
         clip_min_std = 1e-12
 
-    class policy( A1RoughCfgPPO.policy ):
+    class policy(AlienGoRoughCfgPPO.policy):
         rnn_type = 'gru'
         mu_activation = "tanh"
-    
-    class runner( A1RoughCfgPPO.runner ):
+
+    class runner(AlienGoRoughCfgPPO.runner):
         policy_class_name = "ActorCriticRecurrent"
-        experiment_name = "field_a1"
+        experiment_name = "field_aliengo"
         resume = False
-        
+
         run_name = "".join(["WalkForward",
         ("_propDelay{:.2f}-{:.2f}".format(
-                A1FieldCfg.sensor.proprioception.latency_range[0],
-                A1FieldCfg.sensor.proprioception.latency_range[1],
-            ) if A1FieldCfg.sensor.proprioception.latency_range[1] > 0. else ""
+                AlienGoFieldCfg.sensor.proprioception.latency_range[0],
+                AlienGoFieldCfg.sensor.proprioception.latency_range[1],
+            ) if AlienGoFieldCfg.sensor.proprioception.latency_range[1] > 0. else ""
         ),
         ("_aScale{:d}{:d}{:d}".format(
-                int(A1FieldCfg.control.action_scale[0] * 10),
-                int(A1FieldCfg.control.action_scale[1] * 10),
-                int(A1FieldCfg.control.action_scale[2] * 10),
-            ) if isinstance(A1FieldCfg.control.action_scale, (tuple, list)) \
-            else "_aScale{:.1f}".format(A1FieldCfg.control.action_scale)
+                int(AlienGoFieldCfg.control.action_scale[0] * 10),
+                int(AlienGoFieldCfg.control.action_scale[1] * 10),
+                int(AlienGoFieldCfg.control.action_scale[2] * 10),
+            ) if isinstance(AlienGoFieldCfg.control.action_scale, (tuple, list)) \
+            else "_aScale{:.1f}".format(AlienGoFieldCfg.control.action_scale)
         ),
         ])
         resume = False
-        max_iterations = 5000
+        max_iterations = 50000
         save_interval = 500
-    
+        log_interval = 50

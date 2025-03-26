@@ -3,19 +3,19 @@ import numpy as np
 from os import path as osp
 from collections import OrderedDict
 
-from legged_gym.envs.go2.go2_config import Go2RoughCfg, Go2RoughCfgPPO
+from legged_gym.envs.aliengo.aliengo_config import AlienGoRoughCfg, AlienGoRoughCfgPPO
 
-class Go2FieldCfg( Go2RoughCfg ):
-    class init_state( Go2RoughCfg.init_state ):
+class AlienGoFieldCfg( AlienGoRoughCfg ):
+    class init_state( AlienGoRoughCfg.init_state ):
         pos = [0.0, 0.0, 0.7]
         zero_actions = False
 
-    class sensor( Go2RoughCfg.sensor):
-        class proprioception( Go2RoughCfg.sensor.proprioception ):
+    class sensor( AlienGoRoughCfg.sensor):
+        class proprioception( AlienGoRoughCfg.sensor.proprioception ):
             # latency_range = [0.0, 0.0]
             latency_range = [0.005, 0.045] # [s]
 
-    class terrain( Go2RoughCfg.terrain ):
+    class terrain( AlienGoRoughCfg.terrain ):
         num_rows = 10
         num_cols = 40
         selected = "BarrierTrack"
@@ -131,11 +131,11 @@ class Go2FieldCfg( Go2RoughCfg ):
             n_obstacles_per_track= 1,
         )
 
-    class commands( Go2RoughCfg.commands ):
+    class commands( AlienGoRoughCfg.commands ):
         # a mixture of command sampling and goal_based command update allows only high speed range
         # in x-axis but no limits on y-axis and yaw-axis
         lin_cmd_cutoff = 0.2
-        class ranges( Go2RoughCfg.commands.ranges ):
+        class ranges( AlienGoRoughCfg.commands.ranges ):
             # lin_vel_x = [0.6, 1.8]
             lin_vel_x = [-0.6, 2.0]
         
@@ -148,11 +148,11 @@ class Go2FieldCfg( Go2RoughCfg ):
             follow_cmd_cutoff = True
             x_stop_by_yaw_threshold = 1. # stop when yaw is over this threshold [rad]
 
-    class asset( Go2RoughCfg.asset ):
+    class asset( AlienGoRoughCfg.asset ):
         terminate_after_contacts_on = []
         penalize_contacts_on = ["thigh", "calf", "base"]
 
-    class termination( Go2RoughCfg.termination ):
+    class termination( AlienGoRoughCfg.termination ):
         roll_kwargs = dict(
             threshold= 1.4, # [rad]
         )
@@ -162,7 +162,7 @@ class Go2FieldCfg( Go2RoughCfg ):
         timeout_at_border = True
         timeout_at_finished = False
 
-    class rewards( Go2RoughCfg.rewards ):
+    class rewards( AlienGoRoughCfg.rewards ):
         class scales:
             tracking_lin_vel = 1.
             tracking_ang_vel = 1.
@@ -179,7 +179,7 @@ class Go2FieldCfg( Go2RoughCfg ):
             # penetration penalty
             penetrate_depth = -0.05
 
-    class noise( Go2RoughCfg.noise ):
+    class noise( AlienGoRoughCfg.noise ):
         add_noise = False
 
     class curriculum:
@@ -188,42 +188,41 @@ class Go2FieldCfg( Go2RoughCfg ):
         no_moveup_when_fall = True
     
 logs_root = osp.join(osp.dirname(osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))), "logs")
-class Go2FieldCfgPPO( Go2RoughCfgPPO ):
-    class algorithm( Go2RoughCfgPPO.algorithm ):
+class AlienGoFieldCfgPPO( AlienGoRoughCfgPPO ):
+    class algorithm( AlienGoRoughCfgPPO.algorithm ):
         entropy_coef = 0.0
 
-    class runner( Go2RoughCfgPPO.runner ):
-        experiment_name = "field_go2"
+    class runner( AlienGoRoughCfgPPO.runner ):
+        experiment_name = "field_aliengo"
 
         resume = True
-        load_run = osp.join(logs_root, "rough_go2",
-            "Mar13_20-17-57_Go2Rough_pEnergy-2e-05_pDofErr-1e-02_pDofErrN-1e+00_pStand-2e+00_noResume",
+        load_run = osp.join(logs_root, "rough_aliengo",
+            "Mar17_19-38-29_AlienGoRough_pEnergy-2e-05_pDofErr-1e-02_pDofErrN-1e+00_pStand-2e+00_noResume",
         )
 
-        run_name = "".join(["Go2_",
-            ("{:d}skills".format(len(Go2FieldCfg.terrain.BarrierTrack_kwargs["options"]))),
-            ("_pEnergy" + np.format_float_scientific(-Go2FieldCfg.rewards.scales.energy_substeps, precision=2)),
-            # ("_pDofErr" + np.format_float_scientific(-Go2FieldCfg.rewards.scales.dof_error, precision=2) if getattr(Go2FieldCfg.rewards.scales, "dof_error", 0.) != 0. else ""),
-            # ("_pHipDofErr" + np.format_float_scientific(-Go2FieldCfg.rewards.scales.dof_error_named, precision=2) if getattr(Go2FieldCfg.rewards.scales, "dof_error_named", 0.) != 0. else ""),
-            # ("_pStand" + np.format_float_scientific(Go2FieldCfg.rewards.scales.stand_still, precision=2)),
-            # ("_pTerm" + np.format_float_scientific(Go2FieldCfg.rewards.scales.termination, precision=2) if hasattr(Go2FieldCfg.rewards.scales, "termination") else ""),
-            ("_pTorques" + np.format_float_scientific(Go2FieldCfg.rewards.scales.torques, precision=2) if hasattr(Go2FieldCfg.rewards.scales, "torques") else ""),
-            # ("_pColl" + np.format_float_scientific(Go2FieldCfg.rewards.scales.collision, precision=2) if hasattr(Go2FieldCfg.rewards.scales, "collision") else ""),
-            ("_pLazyStop" + np.format_float_scientific(Go2FieldCfg.rewards.scales.lazy_stop, precision=2) if hasattr(Go2FieldCfg.rewards.scales, "lazy_stop") else ""),
-            # ("_trackSigma" + np.format_float_scientific(Go2FieldCfg.rewards.tracking_sigma, precision=2) if Go2FieldCfg.rewards.tracking_sigma != 0.25 else ""),
-            # ("_pPenV" + np.format_float_scientific(-Go2FieldCfg.rewards.scales.penetrate_volume, precision=2)),
-            ("_pPenD" + np.format_float_scientific(-Go2FieldCfg.rewards.scales.penetrate_depth, precision=2)),
-            # ("_pTorqueL1" + np.format_float_scientific(-Go2FieldCfg.rewards.scales.exceed_torque_limits_l1norm, precision=2)),
-            ("_penEasier{:d}".format(Go2FieldCfg.curriculum.penetrate_depth_threshold_easier)),
-            ("_penHarder{:d}".format(Go2FieldCfg.curriculum.penetrate_depth_threshold_harder)),
-            # ("_leapMin" + np.format_float_scientific(Go2FieldCfg.terrain.BarrierTrack_kwargs["leap"]["length"][0], precision=2)),
-            ("_leapHeight" + np.format_float_scientific(Go2FieldCfg.terrain.BarrierTrack_kwargs["leap"]["height"], precision=2)),
-            ("_motorTorqueClip" if Go2FieldCfg.control.motor_clip_torque else ""),
-            # ("_noMoveupWhenFall" if Go2FieldCfg.curriculum.no_moveup_when_fall else ""),
+        run_name = "".join(["AlienGo_",
+            ("{:d}skills".format(len(AlienGoFieldCfg.terrain.BarrierTrack_kwargs["options"]))),
+            ("_pEnergy" + np.format_float_scientific(-AlienGoFieldCfg.rewards.scales.energy_substeps, precision=2)),
+            # ("_pDofErr" + np.format_float_scientific(-AlienGoFieldCfg.rewards.scales.dof_error, precision=2) if getattr(AlienGoFieldCfg.rewards.scales, "dof_error", 0.) != 0. else ""),
+            # ("_pHipDofErr" + np.format_float_scientific(-AlienGoFieldCfg.rewards.scales.dof_error_named, precision=2) if getattr(AlienGoFieldCfg.rewards.scales, "dof_error_named", 0.) != 0. else ""),
+            # ("_pStand" + np.format_float_scientific(AlienGoFieldCfg.rewards.scales.stand_still, precision=2)),
+            # ("_pTerm" + np.format_float_scientific(AlienGoFieldCfg.rewards.scales.termination, precision=2) if hasattr(AlienGoFieldCfg.rewards.scales, "termination") else ""),
+            ("_pTorques" + np.format_float_scientific(AlienGoFieldCfg.rewards.scales.torques, precision=2) if hasattr(AlienGoFieldCfg.rewards.scales, "torques") else ""),
+            # ("_pColl" + np.format_float_scientific(AlienGoFieldCfg.rewards.scales.collision, precision=2) if hasattr(AlienGoFieldCfg.rewards.scales, "collision") else ""),
+            ("_pLazyStop" + np.format_float_scientific(AlienGoFieldCfg.rewards.scales.lazy_stop, precision=2) if hasattr(AlienGoFieldCfg.rewards.scales, "lazy_stop") else ""),
+            # ("_trackSigma" + np.format_float_scientific(AlienGoFieldCfg.rewards.tracking_sigma, precision=2) if AlienGoFieldCfg.rewards.tracking_sigma != 0.25 else ""),
+            # ("_pPenV" + np.format_float_scientific(-AlienGoFieldCfg.rewards.scales.penetrate_volume, precision=2)),
+            ("_pPenD" + np.format_float_scientific(-AlienGoFieldCfg.rewards.scales.penetrate_depth, precision=2)),
+            # ("_pTorqueL1" + np.format_float_scientific(-AlienGoFieldCfg.rewards.scales.exceed_torque_limits_l1norm, precision=2)),
+            ("_penEasier{:d}".format(AlienGoFieldCfg.curriculum.penetrate_depth_threshold_easier)),
+            ("_penHarder{:d}".format(AlienGoFieldCfg.curriculum.penetrate_depth_threshold_harder)),
+            # ("_leapMin" + np.format_float_scientific(AlienGoFieldCfg.terrain.BarrierTrack_kwargs["leap"]["length"][0], precision=2)),
+            ("_leapHeight" + np.format_float_scientific(AlienGoFieldCfg.terrain.BarrierTrack_kwargs["leap"]["height"], precision=2)),
+            # ("_noMoveupWhenFall" if AlienGoFieldCfg.curriculum.no_moveup_when_fall else ""),
             ("_noResume" if not resume else "_from" + "_".join(load_run.split("/")[-1].split("_")[:2])),
         ])
 
-        max_iterations = 38000
-        save_interval = 10000
+        max_iterations = 28000
+        save_interval = 5000
         log_interval = 100
         

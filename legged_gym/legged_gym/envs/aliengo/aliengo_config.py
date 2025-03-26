@@ -4,19 +4,18 @@ import os.path as osp
 
 from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobotCfgPPO
 
-go2_action_scale = 0.5  # 用于控制器中对 动作命令 进行缩放，以确保动作在合适范围内
-go2_const_dof_range = dict( # 定义机器人各关节（自由度）的角度限制
-    Hip_max= 1.0472,
-    Hip_min= -1.0472,
-    Front_Thigh_max= 3.4907,
-    Front_Thigh_min= -1.5708,
-    Rear_Thigh_max= 4.5379,
-    Rear_Thigh_min= -0.5236,
-    Calf_max= -0.83776,
-    Calf_min= -2.7227,
+aliengo_action_scale = 0.5
+# copied from aliengo_const.h from unitree_legged_sdk
+aliengo_const_dof_range = dict(
+    Hip_max=1.047,  # 髋关节限制, 60 ~ -50 degree
+    Hip_min=-0.873,
+    Thigh_max=3.927,  # 大腿关节限制, 225 ~ -30 degree
+    Thigh_min=-0.524,
+    Calf_max=-0.611,  # 小腿关节限制（负值为伸展方向）, -35 ~  degree
+    Calf_min=-2.775,
 )
 
-class Go2RoughCfg( LeggedRobotCfg ):
+class AlienGoRoughCfg( LeggedRobotCfg ):
     class env:
         num_envs = 4096
         num_observations = None # No use, use obs_components
@@ -27,27 +26,26 @@ class Go2RoughCfg( LeggedRobotCfg ):
         send_timeouts = True # send time out information to the algorithm
         episode_length_s = 20 # episode length in seconds
 
-        # 观测数据 的组成
         obs_components = [
-            "lin_vel",  # 线速度
-            "ang_vel",  # 角速度
-            "projected_gravity",    # 重力投影
-            "commands", # 指令
-            "dof_pos",  # 各关节位置
-            "dof_vel",  # 各关节速度
-            "last_actions", # 上次动作
-            "height_measurements",  # 高度测量
+            "lin_vel",
+            "ang_vel",
+            "projected_gravity",
+            "commands",
+            "dof_pos",
+            "dof_vel",
+            "last_actions",
+            "height_measurements",
         ]
 
     class sensor:
         class proprioception:
             obs_components = ["ang_vel", "projected_gravity", "commands", "dof_pos", "dof_vel"]
-            latency_range = [0.005, 0.045] # 传感器延迟范围，模拟实际传感器延迟，[s]
-            latency_resampling_time = 5.0 # 每 5 秒对延迟进行重新采样，以引入随机性和现实性，[s]
+            latency_range = [0.005, 0.045] # [s]
+            latency_resampling_time = 5.0 # [s]
 
     class terrain:
-        selected = "TerrainPerlin"  # 使用基于 Perlin 噪声生成的地形
-        mesh_type = None    # 地形网格类型
+        selected = "TerrainPerlin"
+        mesh_type = None
         measure_heights = True
         # x: [-0.5, 1.5], y: [-0.5, 0.5] range for go2
         measured_points_x = [i for i in np.arange(-0.5, 1.51, 0.1)]
@@ -66,10 +64,9 @@ class Go2RoughCfg( LeggedRobotCfg ):
         num_cols = 16 # number of terrain cols (types)
         slope_treshold = 1.
 
-        # 包含 Perlin 噪声参数
         TerrainPerlin_kwargs = dict(
-            zScale= 0.07,   # 垂直缩放
-            frequency= 10,  # 频率
+            zScale= 0.07,
+            frequency= 10,
         )
     
     class commands( LeggedRobotCfg.commands ):
@@ -83,41 +80,48 @@ class Go2RoughCfg( LeggedRobotCfg ):
             ang_vel_yaw = [-2., 2.]
 
     class init_state( LeggedRobotCfg.init_state ):
-        pos = [0., 0., 0.5] # [m]
-        default_joint_angles = { # 12 joints in the order of simulation
-            "FL_hip_joint": 0.1,
-            "FL_thigh_joint": 0.7,
-            "FL_calf_joint": -1.5,
-            "FR_hip_joint": -0.1,
-            "FR_thigh_joint": 0.7,
-            "FR_calf_joint": -1.5,
-            "RL_hip_joint": 0.1,
-            "RL_thigh_joint": 1.0,
-            "RL_calf_joint": -1.5,
-            "RR_hip_joint": -0.1,
-            "RR_thigh_joint": 1.0,
-            "RR_calf_joint": -1.5,
+        pos = [0.0, 0.0, 0.55]  # x,y,z [m]
+        default_joint_angles = {  # = target angles [rad] when action = 0.0
+            'FL_hip_joint': 0.0,  # [rad]
+            'RL_hip_joint': 0.0,  # [rad]
+            'FR_hip_joint': 0.0,  # [rad]
+            'RR_hip_joint': 0.0,  # [rad]
+
+            'FL_thigh_joint': 0.8,  # [rad]
+            'RL_thigh_joint': 0.8,  # [rad]
+            'FR_thigh_joint': 0.8,  # [rad]
+            'RR_thigh_joint': 0.8,  # [rad]
+
+            'FL_calf_joint': -1.5,  # [rad]
+            'RL_calf_joint': -1.5,  # [rad]
+            'FR_calf_joint': -1.5,  # [rad]
+            'RR_calf_joint': -1.5,  # [rad]
         }
 
     class control( LeggedRobotCfg.control ):
-        stiffness = {'joint': 40.}
-        damping = {'joint': 1.}
-        action_scale = go2_action_scale
-        computer_clip_torque = False
-        motor_clip_torque = True
+        # PD Drive parameters:
+        control_type = 'P'
+        stiffness = {'joint': 40.0}  # [N*m/rad]
+        damping = {'joint': 2.0}  # [N*m*s/rad]
+        # action scale: target angle = actionScale * action + defaultAngle
+        action_scale = aliengo_action_scale
+        # decimation: Number of control action updates @ sim DT per policy DT
+        decimation = 4
+        hip_reduction = 1.0
 
     class asset( LeggedRobotCfg.asset ):
-        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/go2/urdf/go2.urdf'
-        name = "go2"
+        file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/aliengo/urdf/aliengo.urdf'
+        name = "aliengo"
         foot_name = "foot"
         front_hip_names = ["FL_hip_joint", "FR_hip_joint"]  # 前髋关节名称
-        rear_hip_names = ["RL_hip_joint", "RR_hip_joint"]   # 后髋关节名称
-        penalize_contacts_on = ["thigh", "calf"]
-        terminate_after_contacts_on = ["base"]
-        sdk_dof_range = go2_const_dof_range # 关节范围（引用外部变量）
-        dof_velocity_override = 35. # 关节速度限制覆盖值（单位：rad/s）
+        rear_hip_names = ["RL_hip_joint", "RR_hip_joint"]  # 后髋关节名称
+        penalize_contacts_on = ["thigh", "calf"]  # 非足部接触惩罚区域
+        terminate_after_contacts_on = ["base"]  # 终止训练条件
+        sdk_dof_range = aliengo_const_dof_range
+        dof_velocity_override = 35.  # 关节速度限制覆盖值（单位：rad/s）
+        self_collisions = 1  # 1：禁用自身各部分之间的碰撞检测（提升性能）；0：启用
 
-    class termination:  # 终止条件
+    class termination:
         termination_terms = [
             "roll",
             "pitch",
@@ -226,7 +230,7 @@ class Go2RoughCfg( LeggedRobotCfg ):
         }
 
 logs_root = osp.join(osp.dirname(osp.dirname(osp.dirname(osp.dirname(osp.abspath(__file__))))), "logs")
-class Go2RoughCfgPPO( LeggedRobotCfgPPO ):
+class AlienGoRoughCfgPPO( LeggedRobotCfgPPO ):
     class algorithm( LeggedRobotCfgPPO.algorithm ):
         entropy_coef = 0.01
         clip_min_std = 0.2
@@ -264,19 +268,19 @@ class Go2RoughCfgPPO( LeggedRobotCfgPPO ):
     class runner( LeggedRobotCfgPPO.runner ):
         policy_class_name = "EncoderStateAcRecurrent"
         algorithm_class_name = "EstimatorPPO"
-        experiment_name = "rough_go2"
+        experiment_name = "rough_aliengo"
         
         resume = False
         load_run = None
 
-        run_name = "".join(["Go2Rough",
-            ("_pEnergy" + np.format_float_scientific(Go2RoughCfg.rewards.scales.energy_substeps, precision= 1, trim= "-") if Go2RoughCfg.rewards.scales.energy_substeps != 0 else ""),
-            ("_pDofErr" + np.format_float_scientific(Go2RoughCfg.rewards.scales.dof_error, precision= 1, trim= "-") if Go2RoughCfg.rewards.scales.dof_error != 0 else ""),
-            ("_pDofErrN" + np.format_float_scientific(Go2RoughCfg.rewards.scales.dof_error_named, precision= 1, trim= "-") if Go2RoughCfg.rewards.scales.dof_error_named != 0 else ""),
-            ("_pStand" + np.format_float_scientific(Go2RoughCfg.rewards.scales.stand_still, precision= 1, trim= "-") if Go2RoughCfg.rewards.scales.stand_still != 0 else ""),
+        run_name = "".join(["AlienGoRough",
+            ("_pEnergy" + np.format_float_scientific(AlienGoRoughCfg.rewards.scales.energy_substeps, precision= 1, trim= "-") if AlienGoRoughCfg.rewards.scales.energy_substeps != 0 else ""),
+            ("_pDofErr" + np.format_float_scientific(AlienGoRoughCfg.rewards.scales.dof_error, precision= 1, trim= "-") if AlienGoRoughCfg.rewards.scales.dof_error != 0 else ""),
+            ("_pDofErrN" + np.format_float_scientific(AlienGoRoughCfg.rewards.scales.dof_error_named, precision= 1, trim= "-") if AlienGoRoughCfg.rewards.scales.dof_error_named != 0 else ""),
+            ("_pStand" + np.format_float_scientific(AlienGoRoughCfg.rewards.scales.stand_still, precision= 1, trim= "-") if AlienGoRoughCfg.rewards.scales.stand_still != 0 else ""),
             ("_noResume" if not resume else "_from" + "_".join(load_run.split("/")[-1].split("_")[:2])),
         ])
 
         max_iterations = 2000
-        save_interval = 2000
+        save_interval = 1000
         log_interval = 100
